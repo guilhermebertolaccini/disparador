@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Link } from "react-router-dom";
 import { Upload, CheckCircle, Loader2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -159,25 +160,16 @@ export default function Campanhas() {
   const columns: Column<Campaign>[] = [
     { key: "name", label: "Nome" },
     { key: "segment", label: "Segmento" },
-    {
-      key: "speed",
-      label: "Velocidade",
-      render: (campaign) => (
-        <Badge className={speedColors[campaign.speed]}>
-          {speedLabels[campaign.speed]}
-        </Badge>
-      )
-    },
     { key: "date", label: "Data" },
     {
       key: "actions",
       label: "Ações",
       render: (campaign) => (
-        <a href={`/campanhas/dashboard?name=${encodeURIComponent(campaign.name)}`} target="_blank" rel="noopener noreferrer">
+        <Link to={`/campanhas/dashboard?name=${encodeURIComponent(campaign.name)}`}>
           <Button variant="outline" size="sm">
             Ver Dashboard
           </Button>
-        </a>
+        </Link>
       )
     }
   ];
@@ -199,11 +191,11 @@ export default function Campanhas() {
       // Create campaign
       const campaign = await campaignsService.create({
         name: formData.name.trim(),
-        speed: formData.speed,
+        speed: 'slow', // Sempre lento para anti-ban
         segment: formData.segment,
         useTemplate: formData.useTemplate,
         templateId: formData.useTemplate && formData.templateId ? parseInt(formData.templateId) : undefined,
-        endTime: formData.endTime || undefined,
+        // endTime removido conforme solicitação (sempre fixo 30s-2.5min)
       });
 
       // Upload CSV if provided
@@ -294,7 +286,7 @@ export default function Campanhas() {
           <GlassCard>
             <h2 className="text-xl font-semibold text-foreground mb-6">Criar Campanha</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome da Campanha *</Label>
                   <Input
@@ -319,32 +311,6 @@ export default function Campanhas() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="speed">Velocidade</Label>
-                  <Select value={formData.speed} onValueChange={(value: 'fast' | 'medium' | 'slow') => setFormData({ ...formData, speed: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fast">Rápida (3min entre envios)</SelectItem>
-                      <SelectItem value="medium">Média (6min entre envios)</SelectItem>
-                      <SelectItem value="slow">Lenta (10min entre envios)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endTime">Horário Limite de Envio</Label>
-                  <Input
-                    id="endTime"
-                    type="time"
-                    value={formData.endTime}
-                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                    placeholder="19:00"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    As mensagens serão distribuídas uniformemente até este horário
-                  </p>
                 </div>
               </div>
 
