@@ -179,11 +179,18 @@ export class CampaignsService {
         }
       );
 
-      // Calcular delay aleatório para próxima mensagem (2-6 minutos)
+      // Calcular delay aleatório para próxima mensagem (30s - 2.5min)
       const randomDelayMinutes = minDelayMinutes + Math.random() * (maxDelayMinutes - minDelayMinutes);
       accumulatedDelayMs += randomDelayMinutes * 60 * 1000;
 
-      console.log(`📤 [Campanha] Contato ${i + 1}/${contacts.length}: ${normalizedPhone} → Linha ${lineId} (delay acumulado: ${Math.round(accumulatedDelayMs / 60000)}min)`);
+      // PAUSA LONGA: A cada ~20 mensagens, fazer pausa de 5-15 minutos (anti-ban)
+      if ((i + 1) % 20 === 0 && i < contacts.length - 1) {
+        const longPauseMinutes = 5 + Math.random() * 10; // 5-15 minutos
+        accumulatedDelayMs += longPauseMinutes * 60 * 1000;
+        console.log(`☕ [Campanha] Pausa longa de ${longPauseMinutes.toFixed(1)}min após ${i + 1} mensagens`);
+      }
+
+      console.log(`📤 [Campanha] Contato ${i + 1}/${contacts.length}: ${normalizedPhone} → Linha ${lineId} (delay: ${Math.round(accumulatedDelayMs / 60000)}min)`);
     }
 
     const estimatedCompletionMs = accumulatedDelayMs;

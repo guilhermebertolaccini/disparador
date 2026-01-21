@@ -5,7 +5,7 @@ type SoundType = 'message' | 'success' | 'error' | 'warning';
 // Get settings from localStorage (can't use hook here for the context)
 const getSettings = () => {
   try {
-    const stored = localStorage.getItem('vend-settings');
+    const stored = localStorage.getItem('eaebet-settings');
     if (stored) {
       return JSON.parse(stored).notifications;
     }
@@ -20,10 +20,10 @@ export function useNotificationSound() {
 
   const playSound = useCallback(async (type: SoundType = 'message') => {
     const settings = getSettings();
-    
+
     // Check if sounds are enabled
     if (!settings.soundEnabled) return;
-    
+
     // Check individual sound type settings
     if (type === 'message' && !settings.messageSound) return;
     if (type === 'success' && !settings.successSound) return;
@@ -36,7 +36,7 @@ export function useNotificationSound() {
       }
 
       const audioContext = audioContextRef.current;
-      
+
       // Resume context if suspended
       if (audioContext.state === 'suspended') {
         await audioContext.resume();
@@ -59,18 +59,18 @@ export function useNotificationSound() {
       freqs.forEach((freq, index) => {
         const osc = audioContext.createOscillator();
         const gain = audioContext.createGain();
-        
+
         osc.connect(gain);
         gain.connect(audioContext.destination);
-        
+
         osc.frequency.setValueAtTime(freq, now + index * (duration / freqs.length));
         osc.type = type === 'error' ? 'sawtooth' : 'sine';
-        
+
         const maxGain = 0.2 * volumeMultiplier;
         gain.gain.setValueAtTime(0, now + index * (duration / freqs.length));
         gain.gain.linearRampToValueAtTime(maxGain, now + index * (duration / freqs.length) + 0.01);
         gain.gain.linearRampToValueAtTime(0, now + (index + 1) * (duration / freqs.length));
-        
+
         osc.start(now + index * (duration / freqs.length));
         osc.stop(now + (index + 1) * (duration / freqs.length) + 0.1);
       });

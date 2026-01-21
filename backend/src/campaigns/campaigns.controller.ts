@@ -31,7 +31,7 @@ import { Readable } from "stream";
 @Controller("campaigns")
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CampaignsController {
-  constructor(private readonly campaignsService: CampaignsService) {}
+  constructor(private readonly campaignsService: CampaignsService) { }
 
   @Post()
   @Roles(Role.admin, Role.supervisor, Role.digital)
@@ -83,6 +83,7 @@ export class CampaignsController {
               cpf: row.cpf || undefined,
               contract: row.contrato || row.contract || undefined,
               segment: row.segment ? parseInt(row.segment) : undefined,
+              message: row.mensagem || row.message || undefined, // Mensagem personalizada por contato
             });
           }
         })

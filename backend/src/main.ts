@@ -48,8 +48,8 @@ async function bootstrap() {
 
   // Swagger/OpenAPI Documentation
   const config = new DocumentBuilder()
-    .setTitle('NewVend API')
-    .setDescription('API para gerenciamento de atendimento WhatsApp')
+    .setTitle('Eae.Bet API')
+    .setDescription('API para gerenciamento de disparos WhatsApp - Eae.Bet')
     .setVersion('1.0')
     .addBearerAuth(
       {

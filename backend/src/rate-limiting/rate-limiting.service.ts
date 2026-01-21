@@ -9,71 +9,83 @@ interface RateLimit {
 
 @Injectable()
 export class RateLimitingService {
+  // Limites AUMENTADOS (Pedido User: 400 msg/dia)
   private readonly baseLimits: Record<string, RateLimit> = {
-    newLine: { daily: 200, hourly: 50 },      // Linhas novas (< 7 dias) - 50 msg/hora, 200/dia
-    warmingUp: { daily: 500, hourly: 100 },   // Linhas aquecendo (7-30 dias) - 100 msg/hora, 500/dia
-    mature: { daily: 1000, hourly: 200 },    // Linhas maduras (> 30 dias) - 200 msg/hora, 1000/dia
+    newLine: { daily: 200, hourly: 40 },      // Linhas novas (<7 dias) - 40 msg/hora, 200/dia
+    warmingUp: { daily: 400, hourly: 70 },    // Linhas aquecendo (7-30 dias) - 70 msg/hora, 400/dia
+    mature: { daily: 600, hourly: 100 },      // Linhas maduras (>30 dias) - 100 msg/hora, 600/dia
   };
 
   constructor(
     private prisma: PrismaService,
     @Inject(forwardRef(() => LineReputationService))
     private lineReputationService?: LineReputationService,
-  ) {}
+  ) { }
 
   /**
    * Verifica se uma linha pode enviar mensagem baseado no rate limit
    * @param lineId ID da linha
    * @returns true se pode enviar, false caso contrário
-   * 
-   * NOTA: Limites desabilitados - sempre retorna true
    */
   async canSendMessage(lineId: number): Promise<boolean> {
-    // Limites desabilitados - sempre permite envio
-    return true;
+    try {
+      const line = await this.prisma.linesStock.findUnique({
+        where: { id: lineId },
+      });
+
+      if (!line) return false;
+
+      const lineAge = this.getLineAge(line.createdAt);
+      const limit = await this.getLimit(lineAge, lineId);
+
+      // Contar mensagens enviadas hoje
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const messagesToday = await this.prisma.conversation.count({
+        where: {
+          userLine: lineId,
+          sender: 'operator',
+          datetime: { gte: today },
+        },
+      });
+
+      // Contar mensagens na última hora
+      const oneHourAgo = new Date();
+      oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+
+      const messagesLastHour = await this.prisma.conversation.count({
+        where: {
+          userLine: lineId,
+          sender: 'operator',
+          datetime: { gte: oneHourAgo },
+        },
+      });
+
+      const canSend = messagesToday < limit.daily && messagesLastHour < limit.hourly;
+
+      if (!canSend) {
+        console.log(`⚠️ [RateLimit] Linha ${lineId} atingiu limite: ${messagesToday}/${limit.daily} dia, ${messagesLastHour}/${limit.hourly} hora`);
+      }
+
+      return canSend;
+    } catch (error) {
+      console.error(`❌ [RateLimit] Erro ao verificar limite:`, error.message);
+      return true; // Em caso de erro, permite envio
+    }
   }
 
   /**
-   * Obtém o limite de mensagens baseado na idade da linha e reputação
-   * @param lineAge Idade da linha em dias
-   * @param lineId ID da linha (para calcular reputação)
-   * @returns Limite de mensagens
+   * Obtém o limite de mensagens baseado na idade da linha
    */
   private async getLimit(lineAge: number, lineId: number): Promise<RateLimit> {
-    let baseLimit: RateLimit;
-    
     if (lineAge < 7) {
-      baseLimit = this.baseLimits.newLine;
+      return this.baseLimits.newLine;
     } else if (lineAge < 30) {
-      baseLimit = this.baseLimits.warmingUp;
+      return this.baseLimits.warmingUp;
     } else {
-      baseLimit = this.baseLimits.mature;
+      return this.baseLimits.mature;
     }
-
-    // Limites desabilitados - retornar valores altos para não bloquear
-    // Ajustar limite baseado na reputação (se disponível) - DESABILITADO
-    // if (this.lineReputationService) {
-    //   try {
-    //     const reputationLimit = await this.lineReputationService.getReputationBasedLimit(lineId);
-    //     // Usar o menor entre o limite base e o limite baseado em reputação
-    //     // Mas garantir mínimo de 50 mensagens/hora
-    //     const adjustedDaily = Math.min(baseLimit.daily, reputationLimit);
-    //     const adjustedHourly = Math.max(50, Math.min(baseLimit.hourly, Math.floor(reputationLimit / 6))); // Mínimo 50/hora
-    //     return {
-    //       daily: adjustedDaily,
-    //       hourly: adjustedHourly,
-    //     };
-    //   } catch (error) {
-    //     console.warn(`⚠️ [RateLimit] Erro ao calcular limite baseado em reputação:`, error.message);
-    //     // Em caso de erro, usar limite base
-    //   }
-    // }
-
-    // Retornar limites muito altos (praticamente ilimitado)
-    return {
-      daily: 999999,
-      hourly: 999999,
-    };
   }
 
   /**
@@ -112,7 +124,7 @@ export class RateLimitingService {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const messagesToday = await this.prisma.conversation.count({
       where: {
         userLine: lineId,
