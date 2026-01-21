@@ -152,6 +152,8 @@ export class CampaignsService {
           templateVariables: campaign.templateVariables,
           endTime: campaign.endTime,
           message: contactMessage,
+          // HACK: Usar messageId para armazenar o agendamento enquanto não temos o campo scheduledAt
+          messageId: `SCHEDULED:${Date.now() + accumulatedDelayMs}`,
         },
       });
 
@@ -308,6 +310,37 @@ export class CampaignsService {
       deliveryRate: sent > 0 ? ((delivered / sent) * 100).toFixed(1) : '0',
       readRate: sent > 0 ? ((read / sent) * 100).toFixed(1) : '0',
       responseRate: sent > 0 ? ((responses / sent) * 100).toFixed(1) : '0',
+      async getNextMessages(campaignName: string) {
+        // Buscar mensagens pendentes (response = false) e que tenham agendamento
+        const pendingMessages = await this.prisma.campaign.findMany({
+          where: {
+            name: campaignName,
+            response: false,
+            messageId: { startsWith: 'SCHEDULED:' },
+          },
+          select: {
+            contactName: true,
+            contactPhone: true,
+            message: true,
+            messageId: true,
+          },
+          take: 100, // Pegar um lote para ordenar em memória
+        });
+
+        // Processar e ordenar por data
+        const sortedMessages = pendingMessages
+          .map(msg => ({
+            contactName: msg.contactName,
+            contactPhone: msg.contactPhone,
+            message: msg.message,
+            timestamp: parseInt(msg.messageId.split(':')[1]),
+            scheduledAt: new Date(parseInt(msg.messageId.split(':')[1])).toISOString(),
+          }))
+          .sort((a, b) => a.timestamp - b.timestamp)
+          .slice(0, 5); // Retornar apenas as 5 próximas
+
+        return sortedMessages;
+      }
     };
   }
 }

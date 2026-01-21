@@ -509,6 +509,10 @@ export const campaignsService = {
     return apiRequest<CampaignStats>(`/campaigns/stats/${encodeURIComponent(name)}`);
   },
 
+  getNextMessages: async (name: string): Promise<Array<{ contactName: string; contactPhone: string; message: string; timestamp: number; scheduledAt: string }>> => {
+    return apiRequest<Array<{ contactName: string; contactPhone: string; message: string; timestamp: number; scheduledAt: string }>>(`/campaigns/next-messages/${encodeURIComponent(name)}`);
+  },
+
   create: async (data: CreateCampaignData): Promise<Campaign> => {
     return apiRequest<Campaign>('/campaigns', {
       method: 'POST',

@@ -131,6 +131,12 @@ export class CampaignsController {
     return this.campaignsService.getStats(name);
   }
 
+  @Get("next-messages/:name")
+  @Roles(Role.admin, Role.supervisor, Role.digital)
+  getNextMessages(@Param("name") name: string) {
+    return this.campaignsService.getNextMessages(name);
+  }
+
   @Delete(":id")
   @Roles(Role.admin, Role.supervisor, Role.digital)
   remove(@Param("id") id: string) {

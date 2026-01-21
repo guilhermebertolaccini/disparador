@@ -41,6 +41,8 @@ export default function CampaignDashboard() {
     const [error, setError] = useState("");
     const [autoRefresh, setAutoRefresh] = useState(false);
 
+    const [nextMessages, setNextMessages] = useState<Array<{ contactName: string; contactPhone: string; message: string; timestamp: number; scheduledAt: string }>>([]);
+
     const fetchStats = async (name: string) => {
         if (!name.trim()) return;
 
@@ -49,6 +51,9 @@ export default function CampaignDashboard() {
         try {
             const data = await campaignsService.getStats(name);
             setStats(data as CampaignStats);
+
+            const next = await campaignsService.getNextMessages(name);
+            setNextMessages(next);
         } catch (err: any) {
             setError(err.message || "Erro ao buscar estatísticas");
             setStats(null);
@@ -229,6 +234,50 @@ export default function CampaignDashboard() {
                             {autoRefresh && " • Atualizando a cada 10 segundos"}
                         </p>
                     </>
+                )}
+
+                {/* Next Messages */}
+                {nextMessages.length > 0 && (
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-semibold">Próximas Mensagens Agendadas</h3>
+                        <GlassCard padding="none" className="overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-xs uppercase bg-muted/50 text-muted-foreground">
+                                        <tr>
+                                            <th className="px-4 py-3">Contato</th>
+                                            <th className="px-4 py-3">Mensagem</th>
+                                            <th className="px-4 py-3">Horário Previsto (SP)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {nextMessages.map((msg, idx) => (
+                                            <tr key={idx} className="border-b border-muted last:border-0 hover:bg-muted/20">
+                                                <td className="px-4 py-3 font-medium">
+                                                    <div>{msg.contactName}</div>
+                                                    <div className="text-xs text-muted-foreground">{msg.contactPhone}</div>
+                                                </td>
+                                                <td className="px-4 py-3 max-w-md truncate" title={msg.message}>
+                                                    {msg.message}
+                                                </td>
+                                                <td className="px-4 py-3 whitespace-nowrap">
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="h-3 w-3 text-muted-foreground" />
+                                                        {new Date(msg.scheduledAt).toLocaleString('pt-BR', {
+                                                            timeZone: 'America/Sao_Paulo',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit',
+                                                            second: '2-digit'
+                                                        })}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </GlassCard>
+                    </div>
                 )}
 
                 {!stats && !loading && !error && (

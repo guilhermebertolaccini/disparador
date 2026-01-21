@@ -9,11 +9,11 @@ interface RateLimit {
 
 @Injectable()
 export class RateLimitingService {
-  // Limites AUMENTADOS (Pedido User: 400 msg/dia)
+  // Limites AUMENTADOS (Pedido User: 300 msg/dia novas, 450 msg/dia outras)
   private readonly baseLimits: Record<string, RateLimit> = {
-    newLine: { daily: 200, hourly: 40 },      // Linhas novas (<7 dias) - 40 msg/hora, 200/dia
-    warmingUp: { daily: 400, hourly: 70 },    // Linhas aquecendo (7-30 dias) - 70 msg/hora, 400/dia
-    mature: { daily: 600, hourly: 100 },      // Linhas maduras (>30 dias) - 100 msg/hora, 600/dia
+    newLine: { daily: 300, hourly: 50 },      // Linhas novas (<7 dias) - 50 msg/hora, 300/dia
+    warmingUp: { daily: 450, hourly: 80 },    // Linhas aquecendo (7-30 dias) - 80 msg/hora, 450/dia
+    mature: { daily: 450, hourly: 80 },       // Linhas maduras (>30 dias) - 80 msg/hora, 450/dia
   };
 
   constructor(
