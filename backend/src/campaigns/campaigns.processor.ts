@@ -87,7 +87,8 @@ export class CampaignsProcessor {
           'CampaignsProcessor',
           { campaignId, lineId },
         );
-        throw new Error('Linha com baixa reputação, envio bloqueado');
+        // Desabilitado bloqueio por reputação temporariamente para permitir envio
+        // throw new Error('Linha com baixa reputação, envio bloqueado');
       }
 
       // Buscar evolução
