@@ -167,11 +167,15 @@ export class CampaignsProcessor {
             finalMessage = templateText;
 
             // Se linha oficial, enviar via Cloud API
-            if (line.oficial && line.token && line.numberId) {
-              await this.sendTemplateViaCloudApi(line, template, cleanPhone, variables);
-            } else {
-              // Enviar via Evolution API
-              await this.sendTemplateViaEvolution(evolution, instanceName, template, cleanPhone, variables);
+            const sentId = line.oficial && line.token && line.numberId
+              ? await this.sendTemplateViaCloudApi(line, template, cleanPhone, variables)
+              : await this.sendTemplateViaEvolution(evolution, instanceName, template, cleanPhone, variables);
+
+            if (sentId) {
+              await this.prisma.campaign.update({
+                where: { id: campaignId },
+                data: { messageId: sentId }
+              });
             }
 
             // Registrar envio de template
@@ -188,7 +192,8 @@ export class CampaignsProcessor {
             });
           } else {
             // Envio de mensagem de texto normal
-            await axios.post(
+            // Envio de mensagem de texto normal
+            const response = await axios.post(
               `${evolution.evolutionUrl}/message/sendText/${instanceName}`,
               {
                 number: cleanPhone,
@@ -200,6 +205,14 @@ export class CampaignsProcessor {
                 },
               }
             );
+
+            // Tentar extrair messageId da resposta da Evolution
+            if (response.data && response.data.key && response.data.key.id) {
+              await this.prisma.campaign.update({
+                where: { id: campaignId },
+                data: { messageId: response.data.key.id }
+              });
+            }
           }
 
           sent = true;
@@ -305,7 +318,7 @@ export class CampaignsProcessor {
     template: any,
     phone: string,
     variables: TemplateVariable[],
-  ) {
+  ): Promise<string | null> {
     const components: any[] = [];
 
     // Body com variáveis
@@ -319,7 +332,7 @@ export class CampaignsProcessor {
       });
     }
 
-    await axios.post(
+    const response = await axios.post(
       `https://graph.facebook.com/v18.0/${line.numberId}/messages`,
       {
         messaging_product: 'whatsapp',
@@ -338,6 +351,8 @@ export class CampaignsProcessor {
         },
       }
     );
+
+    return response.data?.messages?.[0]?.id || null;
   }
 
   /**
@@ -349,7 +364,7 @@ export class CampaignsProcessor {
     template: any,
     phone: string,
     variables: TemplateVariable[],
-  ) {
+  ): Promise<string | null> {
     // Substituir variáveis no texto do template
     let messageText = template.bodyText;
     variables.forEach((v: TemplateVariable, index: number) => {
@@ -359,7 +374,7 @@ export class CampaignsProcessor {
 
     // Tenta enviar como template primeiro
     try {
-      await axios.post(
+      const response = await axios.post(
         `${evolution.evolutionUrl}/message/sendTemplate/${instanceName}`,
         {
           number: phone,
@@ -377,10 +392,11 @@ export class CampaignsProcessor {
           headers: { 'apikey': evolution.evolutionKey },
         }
       );
+      return response.data?.key?.id || null;
     } catch (error) {
       // Fallback: envia como mensagem de texto
       console.log('Fallback para mensagem de texto:', error.message);
-      await axios.post(
+      const response = await axios.post(
         `${evolution.evolutionUrl}/message/sendText/${instanceName}`,
         {
           number: phone,
@@ -390,6 +406,7 @@ export class CampaignsProcessor {
           headers: { 'apikey': evolution.evolutionKey },
         }
       );
+      return response.data?.key?.id || null;
     }
   }
 }
