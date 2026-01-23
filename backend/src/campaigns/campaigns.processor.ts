@@ -10,6 +10,7 @@ import { AppLoggerService } from '../logger/logger.service';
 import { PhoneValidationService } from '../phone-validation/phone-validation.service';
 import { HumanizationService } from '../humanization/humanization.service';
 import { MessageSendingService } from '../message-sending/message-sending.service';
+import { SpintaxService } from '../spintax/spintax.service';
 import axios from 'axios';
 
 interface TemplateVariable {
@@ -171,7 +172,7 @@ export class CampaignsProcessor {
                 const randomGreeting = parsed.greeting[Math.floor(Math.random() * parsed.greeting.length)];
 
                 // Processar Spintax da saudação
-                message = this.spintaxService.processSpintax(randomGreeting);
+                message = this.spintaxService.applySpintax(randomGreeting);
 
                 // Se for greeting, forçamos modo texto e ignoramos template inicial
                 // (O template/payload real será enviado na resposta)
