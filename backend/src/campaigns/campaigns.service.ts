@@ -293,7 +293,10 @@ export class CampaignsService {
       });
 
       const sentCount = await this.prisma.campaign.count({
-        where: { name: group.name, response: true } // Usando response=true como "Enviado/Iniciado"
+        where: {
+          name: group.name,
+          dispatchedAt: { not: null }
+        }
       });
 
       const deliveredCount = await this.prisma.campaign.count({

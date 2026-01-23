@@ -199,7 +199,6 @@ export default function Campanhas() {
     { key: "sent", label: "Enviado" },
     { key: "read", label: "Lido" },
     { key: "nextMessageAt", label: "Próxima Msg" },
-    { key: "nextMessageAt", label: "Próxima Msg" },
     {
       key: "actions",
       label: "Ações",
