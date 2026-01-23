@@ -544,6 +544,10 @@ export const campaignsService = {
     await apiRequest(`/campaigns/${id}`, { method: 'DELETE' });
   },
 
+  deleteByName: async (name: string): Promise<{ deleted: number; name: string }> => {
+    return apiRequest(`/campaigns/by-name/${encodeURIComponent(name)}`, { method: 'DELETE' });
+  },
+
   getCampaignSummaries: async (filters?: any): Promise<any[]> => {
     const query = filters ? `?${new URLSearchParams(filters).toString()}` : '';
     return apiRequest(`/campaigns/summary${query}`);

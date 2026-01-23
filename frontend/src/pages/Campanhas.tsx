@@ -127,7 +127,7 @@ export default function Campanhas() {
 
   // Delete confirmation state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [campaignToDelete, setCampaignToDelete] = useState<number | null>(null);
+  const [campaignToDelete, setCampaignToDelete] = useState<string | null>(null);
 
   const loadCampaigns = useCallback(async () => {
     try {
@@ -200,17 +200,12 @@ export default function Campanhas() {
       label: "Ações",
       render: (campaign) => (
         <div className="flex gap-2">
-          <Link to={`/campanhas/dashboard?name=${encodeURIComponent(campaign.name)}`}>
-            <Button variant="outline" size="sm">
-              Ver Dashboard
-            </Button>
-          </Link>
           <Button
             variant="ghost"
             size="icon"
             className="text-destructive hover:text-destructive hover:bg-destructive/10"
             onClick={() => {
-              setCampaignToDelete(parseInt(campaign.id));
+              setCampaignToDelete(campaign.name);
               setDeleteDialogOpen(true);
             }}
           >
@@ -342,7 +337,7 @@ export default function Campanhas() {
     if (!campaignToDelete) return;
 
     try {
-      await campaignsService.delete(campaignToDelete);
+      await campaignsService.deleteByName(campaignToDelete);
       toast({
         title: "Campanha excluída",
         description: "A campanha e suas mensagens pendentes foram removidas.",
@@ -407,18 +402,6 @@ export default function Campanhas() {
                 />
               </div>
 
-              {/* Greeting Configuration Removed - Using Hardcoded List */}
-              <div className="p-4 bg-secondary/20 rounded-lg border border-secondary/40">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-secondary-foreground font-semibold">👋 Abordagem Amigável (Ativo)</span>
-                  <Badge variant="outline" className="text-xs font-normal bg-success/10 text-success border-success/30">Auto</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  O sistema enviará automaticamente uma das 20 variações de saudação (ex: "Olá, tudo bem?", "E aí?") antes da mensagem principal.
-                </p>
-              </div>
-
-              {/* Greeting Configuration */}
               {/* Greeting Configuration Removed - Using Hardcoded List */}
               <div className="p-4 bg-secondary/20 rounded-lg border border-secondary/40">
                 <div className="flex items-center gap-2 mb-2">

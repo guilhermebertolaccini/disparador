@@ -148,4 +148,10 @@ export class CampaignsController {
   remove(@Param("id") id: string) {
     return this.campaignsService.remove(+id);
   }
+
+  @Delete("by-name/:name")
+  @Roles(Role.admin, Role.supervisor, Role.digital)
+  removeByName(@Param("name") name: string) {
+    return this.campaignsService.removeByName(name);
+  }
 }

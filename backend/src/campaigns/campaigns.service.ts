@@ -135,7 +135,39 @@ export class CampaignsService {
       }
 
       // Usar mensagem do contato se disponível, senão usar mensagem global
-      const contactMessage = contact.message || message;
+      let contactMessage = contact.message || message;
+
+      // 🚀 ANTI-BAN: Sempre envolver mensagem com saudações hardcoded
+      // Se a mensagem ainda não é JSON de greeting, criar o payload
+      if (contactMessage && !contactMessage.trim().startsWith('{')) {
+        const HARDCODED_GREETINGS = [
+          "Olá, tudo bem?",
+          "Oi, tudo bem?",
+          "Oi! Tudo certo?",
+          "Olá! Tudo certo por aí?",
+          "Oi, como você está?",
+          "Olá, como vai você?",
+          "Oi! Como vai?",
+          "E aí, tudo bem?",
+          "E aí, tudo certo?",
+          "Tudo bem por aí?",
+          "Tudo certo com você?",
+          "Como você tem passado?",
+          "Como tem sido seu dia?",
+          "Como estão as coisas?",
+          "Como vai a vida?",
+          "Oi! Como você tá?",
+          "Fala! Tudo bem?",
+          "Boa! Tudo certo?",
+          "Bom dia! Tudo bem?",
+          "Boa tarde! Tudo bem?"
+        ];
+
+        contactMessage = JSON.stringify({
+          greeting: HARDCODED_GREETINGS,
+          content: contactMessage
+        });
+      }
 
       // Criar registro da campanha
       const campaignRecord = await this.prisma.campaign.create({
@@ -330,6 +362,19 @@ export class CampaignsService {
     return this.prisma.campaign.delete({
       where: { id },
     });
+  }
+
+  async removeByName(name: string) {
+    // Delete all campaigns with this name
+    const result = await this.prisma.campaign.deleteMany({
+      where: { name },
+    });
+
+    if (result.count === 0) {
+      throw new NotFoundException(`Nenhuma campanha encontrada com o nome: ${name}`);
+    }
+
+    return { deleted: result.count, name };
   }
 
   async getStats(campaignName: string) {
