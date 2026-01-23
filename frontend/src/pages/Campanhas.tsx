@@ -195,6 +195,10 @@ export default function Campanhas() {
     { key: "name", label: "Nome" },
     { key: "segment", label: "Segmento" },
     { key: "date", label: "Data" },
+    { key: "total", label: "Base" },
+    { key: "sent", label: "Enviado" },
+    { key: "delivered", label: "Entregue" },
+    { key: "read", label: "Lido" },
     {
       key: "actions",
       label: "Ações",
