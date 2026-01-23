@@ -208,6 +208,86 @@ export class CampaignsService {
     };
   }
 
+  async getCampaignSummaries(filters?: any) {
+    const { search } = filters || {};
+
+    // Buscar nomes de campanhas únicos
+    // Nota: findAll pode ser pesado se não filtrarmos.
+    // Ideal: Usar groupBy, mas precisamos ordenação e filtro.
+
+    // Lista todas as campanhas baseada no filtro (pode ser otimizado com raw query futuramente)
+    const where: any = {};
+    if (search) {
+      where.name = { contains: search, mode: 'insensitive' };
+    }
+
+    // Agrupar por nome (Prisma groupBy)
+    const grouped = await this.prisma.campaign.groupBy({
+      by: ['name', 'contactSegment'],
+      where,
+      _count: {
+        _all: true,
+        delivered: true,
+        read: true,
+      },
+      // Precisamos da data mais recente para ordenação
+      _max: {
+        createdAt: true,
+        dateTime: true
+      },
+      orderBy: {
+        _max: {
+          createdAt: 'desc'
+        }
+      }
+    });
+
+    // Precisamos de mais detalhes que o groupBy não dá diretamente (como respondedor count, ou failed count)
+    // Para performance, vamos iterar e fazer queries adicionais ou aceitar aproximações
+    // O groupBy retorna counts de booleans? Não diretamente. delivered e read são boolean.
+    // O groupBy do Prisma só conta registros, não valores true.
+
+    // Abordagem Alternativa mais Robustas: Query Raw ou iteração inteligente.
+    // Vamos usar o groupBy apenas para pegar os nomes únicos ordenados e quantidades totais,
+    // e depois pegar os detalhes SE necessário, ou fazer uma query RAW que é muito mais eficiente.
+
+    const summaries = await Promise.all(grouped.map(async (group) => {
+      // Contagens específicas para cada campanha
+      const stats = await this.prisma.campaign.aggregate({
+        where: { name: group.name },
+        _count: {
+          id: true, // total
+        }
+      });
+
+      const sentCount = await this.prisma.campaign.count({
+        where: { name: group.name, response: true } // Usando response=true como "Enviado/Iniciado"
+      });
+
+      const deliveredCount = await this.prisma.campaign.count({
+        where: { name: group.name, delivered: true }
+      });
+
+      const readCount = await this.prisma.campaign.count({
+        where: { name: group.name, read: true }
+      });
+
+      return {
+        id: group.name, // Usando nome como ID único para a tabela
+        name: group.name,
+        contactSegment: group.contactSegment,
+        createdAt: group._max.createdAt,
+        total: stats._count.id,
+        sent: sentCount,
+        delivered: deliveredCount,
+        read: readCount,
+        // pending: stats._count.id - sentCount
+      };
+    }));
+
+    return summaries;
+  }
+
   async findAll(filters?: any) {
     // Remover campos inválidos que não existem no schema
     const { search, ...validFilters } = filters || {};

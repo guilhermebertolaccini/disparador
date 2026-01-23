@@ -47,6 +47,17 @@ export class CampaignsProcessor {
     } = job.data;
 
     try {
+      // Verificar se a campanha ainda existe (pode ter sido deletada/parada pelo usuário)
+      const campaignExists = await this.prisma.campaign.findUnique({
+        where: { id: campaignId },
+        select: { id: true }
+      });
+
+      if (!campaignExists) {
+        console.log(`🛑 [Campaigns] Campanha ${campaignId} não encontrada (deletada?), cancelando envio para ${contactPhone}`);
+        return;
+      }
+
       // Verificar se está na blocklist
       const isBlocked = await this.blocklistService.isBlocked(contactPhone);
       if (isBlocked) {
@@ -143,6 +154,34 @@ export class CampaignsProcessor {
           );
           await this.humanizationService.sleep(delayMs);
           // ===============================================
+
+          // Verificar se é fluxo de saudação (Anti-ban)
+          let isGreetingFlow = false;
+          let realPayload = '';
+
+          try {
+            if (message && message.trim().startsWith('{')) {
+              const parsed = JSON.parse(message);
+              if (parsed.greeting && Array.isArray(parsed.greeting) && parsed.content) {
+                isGreetingFlow = true;
+                realPayload = parsed.content;
+
+                // Escolher saudação aleatória
+                const randomGreeting = parsed.greeting[Math.floor(Math.random() * parsed.greeting.length)];
+
+                // Processar Spintax da saudação
+                message = this.spintaxService.processSpintax(randomGreeting);
+
+                // Se for greeting, forçamos modo texto e ignoramos template inicial
+                // (O template/payload real será enviado na resposta)
+                useTemplate = false;
+
+                this.logger.log(`👋 [Campaigns] Modo Saudação: Enviando "${message}"`, 'CampaignsProcessor');
+              }
+            }
+          } catch (e) {
+            // Ignorar erro de parse, assumir texto normal
+          }
 
           // Se usar template, enviar via template
           if (useTemplate && templateId) {
@@ -266,10 +305,11 @@ export class CampaignsProcessor {
           });
 
           // Atualizar campanha com sucesso e data de disparo
+          // Se for fluxo de saudação, NÃO marcamos response=true, pois aguardamos a resposta do cliente
           await this.prisma.campaign.update({
             where: { id: campaignId },
             data: {
-              response: true,
+              response: !isGreetingFlow, // True apenas se NÃO for saudação
               dispatchedAt: new Date(), // Data/hora efetiva do disparo
             },
           });

@@ -539,6 +539,15 @@ export const campaignsService = {
 
     return response.json();
   },
+
+  delete: async (id: number): Promise<void> => {
+    await apiRequest(`/campaigns/${id}`, { method: 'DELETE' });
+  },
+
+  getCampaignSummaries: async (filters?: any): Promise<any[]> => {
+    const query = filters ? `?${new URLSearchParams(filters).toString()}` : '';
+    return apiRequest(`/campaigns/summary${query}`);
+  },
 };
 
 // ==================== CONVERSATIONS ====================

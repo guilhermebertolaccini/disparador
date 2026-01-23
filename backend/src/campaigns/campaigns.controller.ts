@@ -113,6 +113,11 @@ export class CampaignsController {
     });
   }
 
+  @Get('summary')
+  getSummaries(@Query('search') search?: string) {
+    return this.campaignsService.getCampaignSummaries({ search });
+  }
+
   @Get()
   @Roles(Role.admin, Role.supervisor, Role.digital)
   findAll() {

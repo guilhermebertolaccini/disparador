@@ -1,8 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Upload, CheckCircle, Loader2 } from "lucide-react";
+import { Upload, CheckCircle, Loader2, Trash2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { GlassCard } from "@/components/ui/glass-card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { CrudTable, Column } from "@/components/crud/CrudTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,8 +52,10 @@ interface Campaign {
   segmentId: number;
   speed: 'fast' | 'medium' | 'slow';
   date: string;
-  total?: number;
-  sent?: number;
+  total: number;
+  sent: number;
+  delivered: number;
+  read: number;
   failed?: number;
 }
 
@@ -69,10 +81,10 @@ export default function Campanhas() {
     name: string;
     segment: string;
     speed: 'fast' | 'medium' | 'slow';
+    // greeting removed from state, using hardcoded list
     message: string;
     useTemplate: boolean;
     templateId: string;
-    endTime: string;
   }>({
     name: '',
     segment: '',
@@ -80,8 +92,30 @@ export default function Campanhas() {
     message: '',
     useTemplate: false,
     templateId: '',
-    endTime: '19:00'
   });
+
+  const HARDCODED_GREETINGS = [
+    "Olá, tudo bem?",
+    "Oi, tudo bem?",
+    "Oi! Tudo certo?",
+    "Olá! Tudo certo por aí?",
+    "Oi, como você está?",
+    "Olá, como vai você?",
+    "Oi! Como vai?",
+    "E aí, tudo bem?",
+    "E aí, tudo certo?",
+    "Tudo bem por aí?",
+    "Tudo certo com você?",
+    "Como você tem passado?",
+    "Como tem sido seu dia?",
+    "Como estão as coisas?",
+    "Como vai a vida?",
+    "Oi! Como você tá?",
+    "Fala! Tudo bem?",
+    "Boa! Tudo certo?",
+    "Bom dia! Tudo bem?",
+    "Boa tarde! Tudo bem?"
+  ];
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showResult, setShowResult] = useState(false);
@@ -91,32 +125,32 @@ export default function Campanhas() {
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
 
-  const mapApiToLocal = useCallback((apiCampaign: APICampaign): Campaign => {
-    const segment = segments.find(s => s.id === apiCampaign.contactSegment);
-    return {
-      id: apiCampaign.id.toString(),
-      name: apiCampaign.name,
-      segment: segment?.name || `Segmento ${apiCampaign.contactSegment}`,
-      segmentId: apiCampaign.contactSegment,
-      speed: apiCampaign.speed,
-      date: format(new Date(apiCampaign.createdAt), 'yyyy-MM-dd'),
-    };
-  }, [segments]);
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<number | null>(null);
 
   const loadCampaigns = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await campaignsService.list();
+      const data = await campaignsService.getCampaignSummaries();
 
-      // Group by campaign name and get unique campaigns
-      const uniqueCampaigns = new Map<string, APICampaign>();
-      data.forEach(c => {
-        if (!uniqueCampaigns.has(c.name)) {
-          uniqueCampaigns.set(c.name, c);
-        }
+      const formatted: Campaign[] = data.map((c: any) => {
+        const segment = segments.find(s => s.id === c.contactSegment);
+        return {
+          id: c.name, // Usando nome como ID visual
+          name: c.name,
+          segment: segment?.name || `Segmento ${c.contactSegment}`,
+          segmentId: c.contactSegment,
+          speed: 'slow',
+          date: format(new Date(c.createdAt), 'yyyy-MM-dd HH:mm'),
+          total: c.total,
+          sent: c.sent,
+          delivered: c.delivered,
+          read: c.read
+        };
       });
 
-      setCampaigns(Array.from(uniqueCampaigns.values()).map(mapApiToLocal));
+      setCampaigns(formatted);
     } catch (error) {
       toast({
         title: "Erro ao carregar campanhas",
@@ -126,7 +160,7 @@ export default function Campanhas() {
     } finally {
       setIsLoading(false);
     }
-  }, [mapApiToLocal]);
+  }, [segments]);
 
   const loadSegments = useCallback(async () => {
     try {
@@ -165,11 +199,24 @@ export default function Campanhas() {
       key: "actions",
       label: "Ações",
       render: (campaign) => (
-        <Link to={`/campanhas/dashboard?name=${encodeURIComponent(campaign.name)}`}>
-          <Button variant="outline" size="sm">
-            Ver Dashboard
+        <div className="flex gap-2">
+          <Link to={`/campanhas/dashboard?name=${encodeURIComponent(campaign.name)}`}>
+            <Button variant="outline" size="sm">
+              Ver Dashboard
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={() => {
+              setCampaignToDelete(parseInt(campaign.id));
+              setDeleteDialogOpen(true);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
           </Button>
-        </Link>
+        </div>
       )
     }
   ];
@@ -188,6 +235,21 @@ export default function Campanhas() {
 
     setIsSubmitting(true);
     try {
+      // Prepare message payload
+      // If user wants greeting flow, we wrap greeting + message in JSON
+      // But only if we have greetings defined.
+      // The requirement: "podemos deixar setado varias formas de chama tipo 'Olá tudo bem?'..."
+
+      let finalMessage = formData.message.trim();
+      // Always use hardcoded greetings for anti-ban flow if message is present
+      if (finalMessage) {
+        // Create JSON payload for Greeting Flow
+        finalMessage = JSON.stringify({
+          greeting: HARDCODED_GREETINGS,
+          content: finalMessage
+        });
+      }
+
       // Create campaign
       const campaign = await campaignsService.create({
         name: formData.name.trim(),
@@ -195,7 +257,6 @@ export default function Campanhas() {
         segment: formData.segment,
         useTemplate: formData.useTemplate,
         templateId: formData.useTemplate && formData.templateId ? parseInt(formData.templateId) : undefined,
-        // endTime removido conforme solicitação (sempre fixo 30s-2.5min)
       });
 
       // Upload CSV if provided
@@ -203,7 +264,7 @@ export default function Campanhas() {
         const uploadResult = await campaignsService.uploadCSV(
           campaign.id,
           csvFile,
-          formData.message.trim() || undefined
+          finalMessage || undefined
         );
 
         setResultData({
@@ -229,7 +290,6 @@ export default function Campanhas() {
         message: '',
         useTemplate: false,
         templateId: '',
-        endTime: '19:00'
       });
       setCsvFile(null);
       if (fileInputRef.current) {
@@ -278,6 +338,28 @@ export default function Campanhas() {
     }
   };
 
+  const handleDeleteCampaign = async () => {
+    if (!campaignToDelete) return;
+
+    try {
+      await campaignsService.delete(campaignToDelete);
+      toast({
+        title: "Campanha excluída",
+        description: "A campanha e suas mensagens pendentes foram removidas.",
+      });
+      loadCampaigns();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao excluir",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setCampaignToDelete(null);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="h-full overflow-y-auto scrollbar-content">
@@ -323,6 +405,29 @@ export default function Campanhas() {
                   placeholder="Digite a mensagem da campanha..."
                   rows={3}
                 />
+              </div>
+
+              {/* Greeting Configuration Removed - Using Hardcoded List */}
+              <div className="p-4 bg-secondary/20 rounded-lg border border-secondary/40">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-secondary-foreground font-semibold">👋 Abordagem Amigável (Ativo)</span>
+                  <Badge variant="outline" className="text-xs font-normal bg-success/10 text-success border-success/30">Auto</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  O sistema enviará automaticamente uma das 20 variações de saudação (ex: "Olá, tudo bem?", "E aí?") antes da mensagem principal.
+                </p>
+              </div>
+
+              {/* Greeting Configuration */}
+              {/* Greeting Configuration Removed - Using Hardcoded List */}
+              <div className="p-4 bg-secondary/20 rounded-lg border border-secondary/40">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-secondary-foreground font-semibold">👋 Abordagem Amigável (Ativo)</span>
+                  <Badge variant="outline" className="text-xs font-normal bg-success/10 text-success border-success/30">Auto</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  O sistema enviará automaticamente uma das 20 variações de saudação (ex: "Olá, tudo bem?", "E aí?") antes da mensagem principal.
+                </p>
               </div>
 
               <div className="flex items-center space-x-4">
@@ -440,7 +545,25 @@ export default function Campanhas() {
             )}
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Campanha e Parar Envios?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Isso excluirá permanentemente a campanha
+                e cancelará todas as mensagens que ainda não foram enviadas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteCampaign} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Excluir e Parar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-    </MainLayout>
+    </MainLayout >
   );
 }
