@@ -163,26 +163,42 @@ export class CampaignsProcessor {
 
           try {
             if (message && message.trim().startsWith('{')) {
-              const parsed = JSON.parse(message);
-              if (parsed.greeting && Array.isArray(parsed.greeting) && parsed.content) {
-                isGreetingFlow = true;
-                realPayload = parsed.content;
+              try {
+                const parsed = JSON.parse(message);
+                if (parsed.greeting && Array.isArray(parsed.greeting) && parsed.content) {
+                  isGreetingFlow = true;
+                  realPayload = parsed.content;
 
-                // Escolher saudação aleatória
-                const randomGreeting = parsed.greeting[Math.floor(Math.random() * parsed.greeting.length)];
+                  // Escolher saudação aleatória
+                  const randomGreeting = parsed.greeting[Math.floor(Math.random() * parsed.greeting.length)];
 
-                // Processar Spintax da saudação
-                message = this.spintaxService.applySpintax(randomGreeting);
+                  // Processar Spintax da saudação
+                  message = this.spintaxService.applySpintax(randomGreeting);
 
-                // Se for greeting, forçamos modo texto e ignoramos template inicial
-                // (O template/payload real será enviado na resposta)
-                useTemplate = false;
+                  // Se for greeting, forçamos modo texto e ignoramos template inicial
+                  // (O template/payload real será enviado na resposta)
+                  useTemplate = false;
 
-                this.logger.log(`👋 [Campaigns] Modo Saudação: Enviando "${message}"`, 'CampaignsProcessor');
+                  this.logger.log(`👋 [Campaigns] Modo Saudação: Enviando "${message}"`, 'CampaignsProcessor');
+                }
+              } catch (e) {
+                this.logger.error(`❌ [Campaigns] Erro ao processar JSON de saudação: ${e.message}`, e.stack, 'CampaignsProcessor');
+                // Se falhar o parse, TENTAR recuperar o conteúdo para não mandar o JSON bruto
+                // Se for impossível, melhor falhar o job do que mandar lixo pro cliente
+                try {
+                  // Tentar extrair content via regex como fallback extremo
+                  const contentMatch = message.match(/"content"\s*:\s*"([^"]+)"/);
+                  if (contentMatch && contentMatch[1]) {
+                    message = contentMatch[1];
+                    this.logger.warn(`⚠️ [Campaigns] Recuperado conteúdo via Regex: "${message}"`, 'CampaignsProcessor');
+                  } else {
+                    this.logger.warn(`⚠️ [Campaigns] Falha total no parse, enviando mensagem original (risco de raw JSON)`, 'CampaignsProcessor');
+                  }
+                } catch (e2) { }
               }
             }
-          } catch (e) {
-            // Ignorar erro de parse, assumir texto normal
+          } catch (outerError) {
+            // Ignorar erro do bloco de greeting
           }
 
           // Se usar template, enviar via template

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bull';
 import { WebhooksController } from './webhooks.controller';
 import { WebhooksService } from './webhooks.service';
 import { PrismaService } from '../prisma.service';
@@ -13,6 +14,9 @@ import { SystemEventsModule } from '../system-events/system-events.module';
 
 @Module({
   imports: [
+    BullModule.registerQueue({
+      name: 'campaigns',
+    }),
     ConversationsModule,
     WebsocketModule,
     LinesModule,
@@ -25,4 +29,4 @@ import { SystemEventsModule } from '../system-events/system-events.module';
   controllers: [WebhooksController],
   providers: [WebhooksService, PrismaService],
 })
-export class WebhooksModule {}
+export class WebhooksModule { }

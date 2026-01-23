@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 import { PrismaService } from '../prisma.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import { WebsocketGateway } from '../websocket/websocket.gateway';
@@ -16,6 +18,7 @@ export class WebhooksService {
   private readonly uploadsDir = './uploads';
 
   constructor(
+    @InjectQueue('campaigns') private campaignsQueue: Queue,
     private prisma: PrismaService,
     private conversationsService: ConversationsService,
     private websocketGateway: WebsocketGateway,
@@ -277,49 +280,25 @@ export class WebhooksService {
                   data: { response: true } // Marca como respondido/finalizado para evitar loops
                 });
 
-                // Enviar mensagem real (Payload) pela mesma fila
-                // Precisamos injetar o Queue se não tivermos
-                // Como este servico aparentemente não tem o Queue injetado no constructor, 
-                // vamos assumir que o CampaignsService ou similar pode ser usado, OU
-                // verificamos se podemos adicionar Queue aqui. 
-                // Nota: O user não pediu alteração estrutural grande, mas para usar Queue precisamos injetar.
-                // Mas, wait. Se eu estou no WebhooksService, eu tenho acesso ao Prisma.
-                // Vou adicionar na queue 'campaigns'.
-                // Se o servico nao tem @InjectQueue, vai falhar se eu usar `this.campaignsQueue`.
-                // Vou verificar se posso adicionar a fila no constructor no proximo passo se falhar build.
-                // Por hora, vou usar um console.error se nao tiver queue, mas idealmente eu deveria injetar.
-                // Melhor: vou adicionar o codigo, e se falhar lints (property does not exist), eu conserto o constructor.
-
-                /* 
-                   ATENÇÃO: WebhooksService não tem a fila injetada. 
-                   Vou precisar adicionar no constructor. 
-                   Mas para replace_file_content funcionar, eu nao consigo trocar o constructor E o metodo ao mesmo tempo facilmente se estiverem longe.
-                   Vou assumir que vou corrigir o constructor depois.
-                */
-                // @ts-ignore
-                if (this.campaignsQueue) {
-                  // @ts-ignore
-                  await this.campaignsQueue.add(
-                    'send-campaign-message',
-                    {
-                      campaignId: activeCampaign.id,
-                      contactName: activeCampaign.contactName,
-                      contactPhone: contactIdentifier,
-                      contactSegment: activeCampaign.contactSegment,
-                      lineId: activeCampaign.lineReceptor,
-                      message: parsed.content, // O CONTEÚDO REAL
-                      useTemplate: activeCampaign.useTemplate,
-                      templateId: activeCampaign.templateId,
-                      templateVariables: activeCampaign.templateVariables,
-                    },
-                    {
-                      delay: 5000 + Math.random() * 10000, // Delay natural de 5-15s
-                      attempts: 3
-                    }
-                  );
-                } else {
-                  console.warn("⚠️ [Webhooks] Fila de campanhas não disponivel neste serviço.");
-                }
+                // Enviar mensagem real (Payload) via fila de campanhas
+                await this.campaignsQueue.add(
+                  'send-campaign-message',
+                  {
+                    campaignId: activeCampaign.id,
+                    contactName: activeCampaign.contactName,
+                    contactPhone: contactIdentifier,
+                    contactSegment: activeCampaign.contactSegment,
+                    lineId: activeCampaign.lineReceptor,
+                    message: parsed.content, // O CONTEÚDO REAL
+                    useTemplate: activeCampaign.useTemplate,
+                    templateId: activeCampaign.templateId,
+                    templateVariables: activeCampaign.templateVariables,
+                  },
+                  {
+                    delay: 5000 + Math.random() * 10000, // Delay natural de 5-15s
+                    attempts: 3
+                  }
+                );
               }
             }
           } catch (err) {

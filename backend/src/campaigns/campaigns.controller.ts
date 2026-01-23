@@ -77,10 +77,17 @@ export class CampaignsController {
         .pipe(csv())
         .on("data", (row) => {
           console.log("📝 [Campaigns] Row do CSV:", row);
-          if (row.name && row.phone) {
+          // Ignorar linhas vazias ou sem telefone
+          if (!row.phone || row.phone.trim() === '') return;
+
+          // Ignorar linhas que parecem ser cabeçalho repetido ou lixo
+          const phoneStr = row.phone.toString().trim();
+          if (phoneStr.toLowerCase().includes('phone') || phoneStr.toLowerCase().includes('telefone') || phoneStr.length < 8) return;
+
+          if (row.name) {
             contacts.push({
               name: row.name,
-              phone: row.phone,
+              phone: phoneStr,
               cpf: row.cpf || undefined,
               contract: row.contrato || row.contract || undefined,
               segment: row.segment ? parseInt(row.segment) : undefined,
