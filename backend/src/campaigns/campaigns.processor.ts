@@ -184,6 +184,7 @@ export class CampaignsProcessor {
 
                   // Processar Spintax da saudação
                   message = this.spintaxService.applySpintax(randomGreeting);
+                  finalMessage = message; // Atualizar finalMessage para envio
 
                   // Se for greeting, forçamos modo texto e ignoramos template inicial
                   // (O template/payload real será enviado na resposta)
