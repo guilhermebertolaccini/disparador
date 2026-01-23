@@ -27,6 +27,7 @@ export class CampaignsProcessor {
     private rateLimitingService: RateLimitingService,
     private lineReputationService: LineReputationService,
     private logger: AppLoggerService,
+    private spintaxService: SpintaxService,
     private phoneValidationService: PhoneValidationService,
     private humanizationService: HumanizationService,
     private messageSendingService: MessageSendingService,
@@ -34,7 +35,7 @@ export class CampaignsProcessor {
 
   @Process('send-campaign-message')
   async handleSendMessage(job: Job) {
-    const {
+    let {
       campaignId,
       contactName,
       contactPhone,

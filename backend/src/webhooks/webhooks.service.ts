@@ -256,7 +256,7 @@ export class WebhooksService {
           try {
             const activeCampaign = await this.prisma.campaign.findFirst({
               where: {
-                contactPhone: cleanPhone,
+                contactPhone: contactIdentifier,
                 response: false, // Ainda não "finalizada" (no contexto do greeting)
                 dispatchedAt: { not: null }, // Já enviamos algo (a saudação)
                 createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Últimas 24h
@@ -269,7 +269,7 @@ export class WebhooksService {
               const parsed = JSON.parse(activeCampaign.message);
               if (parsed.greeting && parsed.content) {
                 // É uma campanha de saudação! O cliente respondeu, hora de enviar o conteúdo real via fila
-                console.log(`🎯 [Webhooks] Cliente respondeu saudação! Disparando conteúdo real para ${cleanPhone}`);
+                console.log(`🎯 [Webhooks] Cliente respondeu saudação! Disparando conteúdo real para ${contactIdentifier}`);
 
                 // Atualizar campanha para não disparar dnv
                 await this.prisma.campaign.update({
@@ -304,7 +304,7 @@ export class WebhooksService {
                     {
                       campaignId: activeCampaign.id,
                       contactName: activeCampaign.contactName,
-                      contactPhone: cleanPhone,
+                      contactPhone: contactIdentifier,
                       contactSegment: activeCampaign.contactSegment,
                       lineId: activeCampaign.lineReceptor,
                       message: parsed.content, // O CONTEÚDO REAL
