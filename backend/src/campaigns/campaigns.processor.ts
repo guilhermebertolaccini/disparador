@@ -164,7 +164,17 @@ export class CampaignsProcessor {
           try {
             if (message && message.trim().startsWith('{')) {
               try {
-                const parsed = JSON.parse(message);
+                let parsed = JSON.parse(message);
+
+                // Handle double-stringified JSON (e.g. "{\"greeting\":...}")
+                if (typeof parsed === 'string') {
+                  try {
+                    parsed = JSON.parse(parsed);
+                  } catch (e) {
+                    // Ignore second parse error
+                  }
+                }
+
                 if (parsed.greeting && Array.isArray(parsed.greeting) && parsed.content) {
                   isGreetingFlow = true;
                   realPayload = parsed.content;
@@ -187,7 +197,8 @@ export class CampaignsProcessor {
                 // Se for impossível, melhor falhar o job do que mandar lixo pro cliente
                 try {
                   // Tentar extrair content via regex como fallback extremo
-                  const contentMatch = message.match(/"content"\s*:\s*"([^"]+)"/);
+                  // Handle escaped quotes in regex for double-stringified case
+                  const contentMatch = message.match(/\\"content\\"\s*:\s*\\"([^"]+)\\"/) || message.match(/"content"\s*:\s*"([^"]+)"/);
                   if (contentMatch && contentMatch[1]) {
                     message = contentMatch[1];
                     this.logger.warn(`⚠️ [Campaigns] Recuperado conteúdo via Regex: "${message}"`, 'CampaignsProcessor');
