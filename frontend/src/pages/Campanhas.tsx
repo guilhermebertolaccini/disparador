@@ -197,8 +197,9 @@ export default function Campanhas() {
     { key: "date", label: "Data" },
     { key: "total", label: "Base" },
     { key: "sent", label: "Enviado" },
-    { key: "delivered", label: "Entregue" },
     { key: "read", label: "Lido" },
+    { key: "nextMessageAt", label: "Próxima Msg" },
+    { key: "nextMessageAt", label: "Próxima Msg" },
     {
       key: "actions",
       label: "Ações",

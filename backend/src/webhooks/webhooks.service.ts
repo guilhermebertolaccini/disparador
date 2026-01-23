@@ -33,7 +33,36 @@ export class WebhooksService {
     try {
       console.log('📩 Webhook recebido:', JSON.stringify(data, null, 2));
 
-      // Verificar se é uma mensagem recebida
+      // Handle Message Status Updates (READ/DELIVERED)
+      if (data.event === 'messages.update' || data.event === 'MESSAGES_UPDATE') {
+        const payload = data.data || data;
+        const updates = Array.isArray(payload) ? payload : [payload];
+
+        for (const update of updates) {
+          const key = update.key;
+          const status = update.update?.status || update.status;
+
+          if (key?.id && status) {
+            console.log(`📨 [Webhook] Update de status para msg ${key.id}: ${status}`);
+
+            const isRead = status === 'READ' || status === 'read' || status === 'PLAYED';
+            const isDelivered = status === 'DELIVERED' || status === 'delivered';
+
+            if (isRead || isDelivered) {
+              await this.prisma.campaign.updateMany({
+                where: { messageId: key.id },
+                data: {
+                  read: isRead ? true : undefined,
+                  delivered: isDelivered ? true : undefined,
+                }
+              });
+            }
+          }
+        }
+        return { status: 'processed_updates' };
+      }
+
+      // Verificar se é uma mensagem recebida (UPSERT)
       if (data.event === 'messages.upsert' || data.event === 'MESSAGES_UPSERT') {
         // Extrair o objeto completo da mensagem (com key, message, pushName, etc)
         const message = data.data || data.message;

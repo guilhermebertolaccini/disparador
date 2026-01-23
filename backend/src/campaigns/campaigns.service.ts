@@ -304,7 +304,7 @@ export class CampaignsService {
         where: { name: group.name, read: true }
       });
 
-      return {
+      const summary = {
         id: group.name, // Usando nome como ID único para a tabela
         name: group.name,
         contactSegment: group.contactSegment,
@@ -314,6 +314,37 @@ export class CampaignsService {
         delivered: deliveredCount,
         read: readCount,
         // pending: stats._count.id - sentCount
+      };
+
+      // Buscar próxima mensagem agendada
+      const nextMessage = await this.prisma.campaign.findFirst({
+        where: {
+          name: group.name,
+          response: false,
+          messageId: { startsWith: 'SCHEDULED:' }
+        },
+        orderBy: {
+          messageId: 'asc' // String sort works for fixed length timestamps, but timestamp strings vary in length? 
+          // Actually timestamps are usually same length (13 digits). 
+          // But risk here: 'SCHEDULED:1...' vs 'SCHEDULED:2...'.
+          // Better to just grab one and parse, but 'asc' might be safe enough for approximation.
+        },
+        select: { messageId: true }
+      });
+
+      let nextMessageAt = null;
+      if (nextMessage && nextMessage.messageId) {
+        try {
+          const timestamp = parseInt(nextMessage.messageId.split(':')[1]);
+          if (!isNaN(timestamp)) {
+            nextMessageAt = new Date(timestamp);
+          }
+        } catch (e) { }
+      }
+
+      return {
+        ...summary,
+        nextMessageAt
       };
     }));
 

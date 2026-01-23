@@ -43,27 +43,6 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   {
-    title: "Atendimento",
-    url: "/atendimento",
-    icon: Headphones,
-    color: "text-cyan",
-    roles: ["operador", "admin"],
-  },
-  {
-    title: "Supervisionar",
-    url: "/supervisionar",
-    icon: Eye,
-    color: "text-warning",
-    roles: ["supervisor", "admin", "digital"],
-  },
-  {
-    title: "Contatos",
-    url: "/contatos",
-    icon: BookUser,
-    color: "text-cyan",
-    roles: ["supervisor", "admin", "digital"],
-  },
-  {
     title: "Campanhas",
     url: "/campanhas",
     icon: Megaphone,
@@ -71,59 +50,10 @@ const menuItems: MenuItem[] = [
     roles: ["supervisor", "admin", "digital"],
   },
   {
-    title: "Tabulações",
-    url: "/tabulacoes",
-    icon: Table2,
-    color: "text-whatsapp",
-    roles: ["supervisor", "admin", "digital"],
-  },
-  {
     title: "Segmentos",
     url: "/segmentos",
     icon: Filter,
     color: "text-destructive",
-    roles: ["admin"],
-  },
-  {
-    title: "Blocklist",
-    url: "/blocklist",
-    icon: Ban,
-    color: "text-muted-foreground",
-    roles: ["supervisor", "admin", "digital"],
-  },
-  {
-    title: "Templates",
-    url: "/templates",
-    icon: FileText,
-    color: "text-primary",
-    roles: ["supervisor", "admin", "digital"],
-  },
-  {
-    title: "Relatórios",
-    url: "/relatorios",
-    icon: BarChart3,
-    color: "text-success",
-    roles: ["supervisor", "admin", "digital"],
-  },
-  {
-    title: "Acompanhamento",
-    url: "/acompanhamento",
-    icon: Activity,
-    color: "text-primary",
-    roles: ["admin"],
-  },
-  {
-    title: "Produtividade Ativadores",
-    url: "/produtividade-ativadores",
-    icon: TrendingUp,
-    color: "text-success",
-    roles: ["admin"],
-  },
-  {
-    title: "Painel Controle",
-    url: "/painel-controle",
-    icon: Sliders,
-    color: "text-purple-500",
     roles: ["admin"],
   },
   {
@@ -141,61 +71,13 @@ const menuItems: MenuItem[] = [
     roles: ["admin", "ativador"],
   },
   {
-    title: "Vida Útil Linhas",
-    url: "/relatorios/vida-util",
-    icon: Clock,
-    color: "text-cyan",
-    roles: ["admin"],
-  },
-  {
-    title: "Log Alocações",
-    url: "/relatorios/alocacoes",
-    icon: Activity,
-    color: "text-green-500",
-    roles: ["admin"],
-  },
-  {
-    title: "Regras de Alocação",
-    url: "/regras-alocacao",
-    icon: Settings,
-    color: "text-violet-500",
-    roles: ["admin"],
-  },
-  {
-    title: "Criador de Relatórios",
-    url: "/criador-relatorio",
-    icon: Database,
-    color: "text-cyan-500",
-    roles: ["admin"],
-  },
-  {
     title: "Usuários",
     url: "/usuarios",
     icon: Users,
     color: "text-warning",
     roles: ["admin"],
   },
-  {
-    title: "Operadores Online",
-    url: "/operadores-online",
-    icon: UserCheck,
-    color: "text-success",
-    roles: ["admin"],
-  },
-  {
-    title: "Tags",
-    url: "/tags",
-    icon: Tags,
-    color: "text-cyan",
-    roles: ["admin"],
-  },
-  {
-    title: "Logs API",
-    url: "/logs",
-    icon: Code,
-    color: "text-destructive",
-    roles: ["admin"],
-  },
+
 ];
 
 export function AppSidebar() {
