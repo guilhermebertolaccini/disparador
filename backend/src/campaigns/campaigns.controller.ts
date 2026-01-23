@@ -74,7 +74,7 @@ export class CampaignsController {
 
     return new Promise((resolve, reject) => {
       stream
-        .pipe(csv())
+        .pipe(csv({ separator: ';' }))
         .on("data", (row) => {
           console.log("📝 [Campaigns] Row do CSV:", row);
           // Ignorar linhas vazias ou sem telefone
