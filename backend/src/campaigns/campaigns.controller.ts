@@ -78,22 +78,21 @@ export class CampaignsController {
         .on("data", (row) => {
           console.log("📝 [Campaigns] Row do CSV:", row);
           // Ignorar linhas vazias ou sem telefone
-          if (!row.phone || row.phone.trim() === '') return;
+          // Limpeza robusta do telefone: manter apenas dígitos
+          const phoneRaw = (row.phone || '').toString();
+          const phoneClean = phoneRaw.replace(/\D/g, '');
 
-          // Ignorar linhas que parecem ser cabeçalho repetido ou lixo
-          const phoneStr = row.phone.toString().trim();
-          if (phoneStr.toLowerCase().includes('phone') || phoneStr.toLowerCase().includes('telefone') || phoneStr.length < 8) return;
+          // Validar se sobrou um número válido (pelo menos 8 dígitos)
+          if (phoneClean.length < 8) return;
 
-          if (row.name) {
-            contacts.push({
-              name: row.name,
-              phone: phoneStr,
-              cpf: row.cpf || undefined,
-              contract: row.contrato || row.contract || undefined,
-              segment: row.segment ? parseInt(row.segment) : undefined,
-              message: row.mensagem || row.message || undefined, // Mensagem personalizada por contato
-            });
-          }
+          contacts.push({
+            name: row.name || '', // Nome opcional, envia vazio se não tiver
+            phone: phoneClean,
+            cpf: row.cpf || undefined,
+            contract: row.contrato || row.contract || undefined,
+            segment: row.segment ? parseInt(row.segment) : undefined,
+            message: row.mensagem || row.message || undefined, // Mensagem personalizada por contato
+          });
         })
         .on("end", async () => {
           console.log(

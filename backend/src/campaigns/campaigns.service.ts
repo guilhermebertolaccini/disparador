@@ -163,9 +163,11 @@ export class CampaignsService {
           "Boa tarde! Tudo bem?"
         ];
 
+        const HARDCODED_MESSAGE = "Se divirta na Eae! A melhor plataforma do Brasil. https://eae.bet/?r=nbjcdxwx";
+
         contactMessage = JSON.stringify({
           greeting: HARDCODED_GREETINGS,
-          content: contactMessage
+          content: HARDCODED_MESSAGE
         });
       }
 
